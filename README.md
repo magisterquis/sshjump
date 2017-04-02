@@ -13,7 +13,7 @@ Example
 -------
 For the impatient:
 
-Create a jumpfile named j containing hosts through which to jump, similar to
+Create a jumpfile named `./j` containing hosts through which to jump, similar to
 the following:
 ```
 user@target1 password SSH-2.0-OpenSSH_6.7
