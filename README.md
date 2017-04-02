@@ -123,3 +123,5 @@ do.
 It should compile and run just fine on Windows (I'm looking at you, former
 employer), which is handy for those "here, have a user desktop, don't plug in
 your computer" situations.
+
+Binaries available upon request.
