@@ -120,6 +120,8 @@ func MakeSSHConns(
 				ClientVersion: j.version,
 			},
 		)
+		/* Signal we're done before error-checking */
+		close(worky)
 		if nil != err {
 			/* Change the error if it was a timeout */
 			if nil != aberr {
@@ -133,8 +135,6 @@ func MakeSSHConns(
 			c.Close()
 			continue
 		}
-		/* Don't timeout the handshake */
-		close(worky)
 
 		/* Upgrade to an SSH client */
 		scli := ssh.NewClient(scon, chans, reqs)
