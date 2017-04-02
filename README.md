@@ -13,8 +13,8 @@ Example
 -------
 For the impatient:
 
-Create a jumpfile named `./j` containing hosts through which to jump, similar to
-the following:
+Create a jumpfile named `./j` containing hosts through which to jump, similar
+to the following:
 ```
 user@target1 password SSH-2.0-OpenSSH_6.7
 root@target2 pa$$w0rd SSH-2.0-SOC_wont_find_me
@@ -39,6 +39,38 @@ string (e.g. `SSH-2.0-OpenSSH_7.3`) to presesnt to the server.  A subset of the
 jumps in the jumpfile may be used (`-njump`, by default the first 5), and the
 order in which jumps are tried may be shuffled to further confuse the
 defenders (`-shuffle`).
+
+Before forwing ports, a test connection is made through the last jump.  By
+default this is to `check.torproject.org:443`, but this can be changed to
+something suitable for the environment.
+
+Port Forwarding
+---------------
+Each port forwarding specification starts with an L or an R, and consists of
+four comma-separated parts: the listen address, the listen port, the target
+address, and the target port.  Multiple space-separated specifications may be
+given on the command line.
+
+### Local Forwards
+
+With `L`, a listening socket is opened on the local host (the host runnnig
+sshjump not necessarily 127.0.0.1, it can be only on an external address), and
+any connection made to that socket will be proxied through the last jump via
+the other connections to the target address and port.
+
+`L0.0.0.0,2222,10.3.4.28,22` will cause the local host to listen on port 2222
+on all addresses, and any connection to 2222 on the local host will be proxied
+to `10.3.4.28:22`.
+
+### Remote Forwards
+
+With `R`, a listening socket is opened on the last jump (if the SSH
+configuration allows it), and connections are proxied via the local host to the
+target address and port.
+
+`R192.168.0.1,3189,127.0.0.1,3189` will listen on port 3189 on the remote host
+on 192.168.0.1, and forward all connections made to that to port 3389 on the
+loopback interface of the host running sshjump.
 
 Installation
 ------------
