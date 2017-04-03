@@ -107,16 +107,24 @@ func MakeSSHConns(
 		) (answers []string, err error) {
 			return []string{j.password}, nil
 		}
+		/* Auth Methods */
+		var am []ssh.AuthMethod
+		if nil == j.key {
+			am = []ssh.AuthMethod{
+				ssh.Password(j.password),
+				ssh.KeyboardInteractive(ki),
+			}
+		} else {
+			am = []ssh.AuthMethod{ssh.PublicKeys(j.key)}
+		}
+
 		/* Upgrade to an SSH connection */
 		scon, chans, reqs, err := ssh.NewClientConn(
 			c,
 			j.host,
 			&ssh.ClientConfig{
-				User: j.username,
-				Auth: []ssh.AuthMethod{
-					ssh.Password(j.password),
-					ssh.KeyboardInteractive(ki),
-				},
+				User:          j.username,
+				Auth:          am,
 				ClientVersion: j.version,
 			},
 		)

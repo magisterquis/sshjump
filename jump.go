@@ -13,11 +13,15 @@ import (
 	"io/ioutil"
 	"log"
 	"math/rand"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
+
+/* KEYPREFIX is the password prefix to indicate a keyfile */
+const KEYPREFIX = "key:"
 
 /* JUMPRE parses lines of the jumpfile */
 var JUMPRE = regexp.MustCompile(`^([^@]+)@(\S+)\s+(.*)\s(SSH-\S+)$`)
@@ -32,7 +36,7 @@ type jump struct {
 }
 
 /* ReadJumps reads the jumpfile and returns the jumps */
-func ReadJumps(fname string) ([]jump, error) {
+func ReadJumps(fname string, keydir string) ([]jump, error) {
 	/* Slurp the jumpfile */
 	jf, err := ioutil.ReadFile(fname)
 	if nil != err {
@@ -52,16 +56,38 @@ func ReadJumps(fname string) ([]jump, error) {
 		}
 		/* Grow the list of jumps */
 		ms := JUMPRE.FindStringSubmatch(l)
-		if nil != ms {
-			js = append(js, jump{
-				username: ms[1],
-				host:     ms[2],
-				password: ms[3],
-				version:  ms[4],
-			})
-			continue
+		if nil == ms {
+			log.Printf("Invalid line in jump file: %q", l)
 		}
-		log.Printf("Invalid line in jump file: %q", l)
+		j := jump{
+			username: ms[1],
+			host:     ms[2],
+			password: ms[3],
+			version:  ms[4],
+		}
+		/* Handle a possible key */
+		if strings.HasPrefix(j.password, KEYPREFIX) {
+			kf := strings.TrimPrefix(
+				j.password,
+				KEYPREFIX,
+			)
+			key, err := getKey(keydir, kf)
+			if nil != err {
+				log.Printf(
+					"Unable to retreive key for "+
+						"%v@%v from %v: %v",
+					j.username,
+					j.host,
+					kf,
+					err,
+				)
+			} else {
+				j.key = key
+			}
+		}
+		/* Add it to the list */
+		js = append(js, j)
+		continue
 	}
 	if 0 == len(js) {
 		return nil, fmt.Errorf("no jumps in %v", fname)
@@ -76,4 +102,21 @@ func ShuffleJumps(s []jump) {
 		j := rand.Intn(i + 1)
 		s[i], s[j] = s[j], s[i]
 	}
+}
+
+/* getKey tries to get the key named keyname.  If it is a relative path, it
+will be searched for in keydir. */
+func getKey(keydir, keyfile string) (ssh.Signer, error) {
+	/* Work out where the file should be */
+	if !filepath.IsAbs(keyfile) {
+		keyfile = filepath.Join(keydir, keyfile)
+	}
+	/* Slurp the file */
+	b, err := ioutil.ReadFile(keyfile)
+	if nil != err {
+		return nil, err
+	}
+	/* Turn it into a signer */
+	s, err := ssh.ParsePrivateKey(b)
+	return s, err
 }
